@@ -23,8 +23,6 @@ const INITIAL_HABITS = [
   { id: '3', name: '📚 Read', description: 'Read for 20 minutes', completed: false },
   { id: '4', name: '🧘 Meditate', description: '10 minutes meditation', completed: false },
   { id: '5', name: '🥗 Eat Healthy', description: 'Include vegetables', completed: false },
-  
-
 ];
 
 export default function App() {
@@ -123,6 +121,23 @@ export default function App() {
     );
   };
 
+  // Tyler S.
+  // Function: Edit Habit
+
+  // Function: Delete Habit
+  const deleteHabit = (id) => {
+    // Find habit in storage
+    // remove habit by returning array without habit in it to storage
+    // report result to user 
+  }
+
+  // Function: Add Habit
+  const addHabit = () => {
+    // Open add/edit dialogue
+    // User input
+    // save to storage with new key
+  }
+
   // Calculate completion percentage
   const completedCount = habits.filter(h => h.completed).length;
   const percentage = Math.round((completedCount / habits.length) * 100);
@@ -147,6 +162,8 @@ export default function App() {
             key={habit.id}
             habit={habit}
             onToggle={() => toggleHabit(habit.id)}
+            onEdit={() => editHabit(habit)}
+            onDelete={() => deleteHabit(habit.id)}
           />
         ))}
       </ScrollView>
@@ -155,7 +172,7 @@ export default function App() {
 }
 
 // Reusable Habit Item Component
-function HabitItem({ habit, onToggle }) {
+function HabitItem({ habit, onToggle, onEdit, onDelete }) {
   return (
     <View style={[
       styles.habitItem,
@@ -171,8 +188,10 @@ function HabitItem({ habit, onToggle }) {
         <Text style={styles.habitDescription}>
           {habit.description}
         </Text>
+
+        {/* Edit and Delete buttoms */}
       </View>
-      
+
       {/* Toggle Button */}
       <TouchableOpacity
         style={[
