@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Modal,
+  Alert,
+  TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 //Acts like permanent storage (similar to localStorage)
@@ -33,6 +36,14 @@ export default function App() {
   
   // State: Current date
   const [currentDate, setCurrentDate] = useState('');
+
+  // TylerS
+  // Add/Edit states
+  const [editHabit, setEditHabit] = useState(null);
+  const [habitDesc, setHabitDesc] = useState('');
+  const [habitName, setHabitName] = useState('');
+  // Add/Edit dialogue box state
+  const [showHabitPrompt, setShowHabitPrompt] = useState(false);
 
   // Effect: Load saved data when app starts
   //useEffect → runs code when the app starts or when data changes
@@ -119,28 +130,81 @@ export default function App() {
           : habit
       )
     );
-  };
 
+  };
   // Tyler S.
   // Function: Edit Habit
+  const saveHabit = () => {
+    const trimmedName = habitName.trim();
+    const trimmedDesc = habitDesc.trim();
+
+    if (!trimmedName) {
+      Alert.alert('Error', 'Please enter a habit name');
+      return;
+    }
+
+    if (editHabit) {
+      setHabits(prevHabits =>
+        prevHabits.map(h =>
+          h.id === editHabit.id
+            ? { ...h, name: trimmedName, description: trimmedDesc }
+            : h
+        )
+      );
+    } else {
+      const newHabit = {
+        id: Date.now().toString(),
+        name: trimmedName,
+        description: trimmedDesc,
+        completed: false,
+      };
+      setHabits(prevHabits => [...prevHabits, newHabit]);
+    }
+
+    setShowHabitPrompt(false);
+    setEditHabit(null);
+    setHabitName('');
+    setHabitDesc('');
+  };
 
   // Function: Delete Habit
-  const deleteHabit = (id) => {
-    // Find habit in storage
-    // remove habit by returning array without habit in it to storage
-    // report result to user 
+  const deleteHabit = (habitId) => {
+    Alert.alert(
+      'Delete Warning',
+      'Are you sure you want to delete this habit?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: () => {
+            // Delete the habit by overwriting the habit array with an array without the deleted habit.
+            setHabits(oldHabits => oldHabits.filter(habit => habit.id !== habitId))
+          }
+        }
+      ]
+    )
   }
 
   // Function: Add Habit
-  const addHabit = () => {
-    // Open add/edit dialogue
-    // User input
-    // save to storage with new key
+  const openAddHabit = () => {
+    setEditHabit(null)
+    setHabitName('')
+    setHabitDesc('')
+    setShowHabitPrompt(true)
+  }
+
+  const openEditHabit = (habit) => {
+    setEditHabit(habit)
+    setHabitName(habit.name)
+    setHabitDesc(habit.description)
+    setShowHabitPrompt(true)
   }
 
   // Calculate completion percentage
   const completedCount = habits.filter(h => h.completed).length;
-  const percentage = Math.round((completedCount / habits.length) * 100);
+  const percentage = habits.length === 0
+    ? 0
+    : Math.round((completedCount / habits.length) * 100);
 
   return (
     <View style={styles.container}>
@@ -153,6 +217,12 @@ export default function App() {
         <Text style={styles.headerProgress}>
           {completedCount} / {habits.length} completed ({percentage}%)
         </Text>
+        {/* Add habit Button - TylerS*/}
+        <View style={styles.headerButtons}>
+          <TouchableOpacity style={styles.addButton} onPress={openAddHabit}>
+            <Text style={styles.addButtonText}>+ Add Habit</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Habit List */}
@@ -162,11 +232,36 @@ export default function App() {
             key={habit.id}
             habit={habit}
             onToggle={() => toggleHabit(habit.id)}
-            onEdit={() => editHabit(habit)}
+            onEdit={() => openEditHabit(habit)}
             onDelete={() => deleteHabit(habit.id)}
           />
         ))}
       </ScrollView>
+
+      {/* Modal for add/edit dialogue box */}
+      <Modal 
+      visible={showHabitPrompt}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() =>  setShowHabitPrompt(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+               {editHabit ? 'Edit Habit' : 'Add Habit'}</Text>
+            <TextInput style={styles.input} placeholder='Habit name' value={habitName} onChangeText={setHabitName}/>
+            <TextInput style={styles.input} placeholder='Description' value={habitDesc} onChangeText={setHabitDesc}/>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setShowHabitPrompt(false)}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={saveHabit}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>       
+      
+      </Modal>
     </View>
   );
 }
@@ -190,6 +285,14 @@ function HabitItem({ habit, onToggle, onEdit, onDelete }) {
         </Text>
 
         {/* Edit and Delete buttoms */}
+        <View style={styles.habitButtons}>
+          <TouchableOpacity style={styles.habitButton} onPress={onEdit}>
+            <Text style={styles.habitButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.habitButton} onPress={onDelete}>
+            <Text style={styles.deleteText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Toggle Button */}
@@ -243,6 +346,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  addButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',},
   habitList: {
     flex: 1,
     padding: 20,
@@ -300,5 +417,73 @@ const styles = StyleSheet.create({
   },
   toggleCircleActive: {
     alignSelf: 'flex-end',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    width: '85%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    marginBottom: 15,
+  },
+  cancelButton: {
+    backgroundColor: '#ccc',
+  },
+  saveButton: {
+    backgroundColor: '#4caf50',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteText: {
+    color: '#f44336',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  habitButtons: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 10,
+  },
+  habitButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  habitButtonText: {
+    fontSize: 13,
+    color: 'blue',
+    fontWeight: '500',
   },
 });
